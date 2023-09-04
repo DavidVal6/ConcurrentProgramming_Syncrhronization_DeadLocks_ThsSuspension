@@ -1,8 +1,6 @@
 package edu.eci.arsw.threads;
 
 import java.util.LinkedList;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import edu.eci.arsw.spamkeywordsdatasource.HostBlacklistsDataSourceFacade;
 
 public class ThreadCheck extends Thread{
@@ -23,11 +21,11 @@ public class ThreadCheck extends Thread{
     private int ocurrences;
 
     public void pauseThread(){
-        paused = true;
+        this.paused = true;
     }
 
     public void resumeThread(){
-        paused = false;
+        this.paused = false;
     }
 
     public boolean isPaused() {
@@ -38,7 +36,7 @@ public class ThreadCheck extends Thread{
         return end;
     }
     public void endThread(){
-        end = true;
+        this.end = true;
     }
 
     public ThreadCheck(HostBlacklistsDataSourceFacade skds, int rangeLimitA, int rangeLimitB, String ipAdress, Object lock){
@@ -60,17 +58,24 @@ public class ThreadCheck extends Thread{
     
     @Override
     public void run(){
-        while(!end) {
-            if(!paused) {
-                countOccurrences();
-                //System.out.println("No. de ocurrencias:");
-                //System.out.println(getOccurrences());
-            }else {
-                try {
-                    lock.wait();
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
+        for(int i = rangeLimitA; i < rangeLimitB; i++){
+            if(end){
+                break;
+            }
+            if(paused) {
+                synchronized(lock){
+                    try {
+                        lock.wait();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                };
+            }
+
+            this.serversChecked++;
+            if(skds.isInBlackListServer(i, ipAdress)){
+                this.ocurrences++;
+                this.indexes.add(i);
             }
         }
     }
@@ -85,23 +90,12 @@ public class ThreadCheck extends Thread{
         this.ipAdress = ipAdress;
     }
 
-    public void countOccurrences(){
-        ocurrences = 0;
-        for(int i = rangeLimitA; i < rangeLimitB; i++){
-            this.serversChecked++;
-            if(skds.isInBlackListServer(i, ipAdress)){
-                ocurrences++;
-                indexes.add(i);
-            }
-        }
-    }
-
     public int getOccurrences(){
         return this.ocurrences;
     }
 
     public int getServersChecked() {
-        return serversChecked;
+        return this.serversChecked;
     }
 
     public LinkedList<Integer> getIndexes(){
