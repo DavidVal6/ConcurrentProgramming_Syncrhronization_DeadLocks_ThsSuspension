@@ -8,7 +8,7 @@ public class Immortal extends Thread {
 
     private ImmortalUpdateReportCallback updateCallback=null;
     
-    private AtomicInteger health;
+    private AtomicInteger health = new AtomicInteger();
     
     private int defaultDamageValue;
 
@@ -26,7 +26,7 @@ public class Immortal extends Thread {
         this.updateCallback=ucb;
         this.name = name;
         this.immortalsPopulation = immortalsPopulation;
-        this.health = health;
+        this.health.set(health);
         this.defaultDamageValue=defaultDamageValue;
         this.lock = lock;
     }
@@ -79,23 +79,28 @@ public class Immortal extends Thread {
     }
 
     public void fight(Immortal i2) {
-
-        if (i2.getHealth() > 0) {
-            i2.changeHealth(i2.getHealth() - defaultDamageValue);
-            this.health.addAndGet(defaultDamageValue);
-            updateCallback.processReport("Fight: " + this + " vs " + i2+"\n");
-        } else {
-            updateCallback.processReport(this + " says:" + i2 + " is already dead!\n");
+        AtomicInteger i2Health = i2.getHealth();
+        
+        synchronized(health){
+            synchronized(i2Health){
+                if (i2Health.get() > 0) {
+                    i2.changeHealth(i2.getHealth().get() - defaultDamageValue);
+                    this.health.addAndGet(defaultDamageValue);
+                    updateCallback.processReport("Fight: " + this + " vs " + i2+"\n");
+                }else {
+                    updateCallback.processReport(this + " says:" + i2 + " is already dead!\n");
+                }
+            }
         }
+    } 
 
-    }
 
     public void changeHealth(int v) {
         health.set(v);
     }
 
-    public int getHealth() {
-        return health.get();
+    public AtomicInteger getHealth() {
+        return health;
     }
 
     @Override
