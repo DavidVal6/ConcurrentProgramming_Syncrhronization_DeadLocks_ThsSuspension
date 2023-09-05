@@ -1,7 +1,6 @@
 package edu.eci.arsw.threads;
 
 import java.util.LinkedList;
-
 import edu.eci.arsw.spamkeywordsdatasource.HostBlacklistsDataSourceFacade;
 
 public class ThreadCheck extends Thread{
@@ -13,17 +12,45 @@ public class ThreadCheck extends Thread{
     private LinkedList<Integer> indexes;
     private int serversChecked;
 
+    private boolean end=false;
+
+    private Object lock;
+
+    private boolean paused = false;
+
     private int ocurrences;
 
-    public ThreadCheck(HostBlacklistsDataSourceFacade skds, int rangeLimitA, int rangeLimitB, String ipAdress){
+    public void pauseThread(){
+        this.paused = true;
+    }
+
+    public void resumeThread(){
+        this.paused = false;
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    public boolean hasEnd() {
+        return end;
+    }
+    public void endThread(){
+        this.end = true;
+    }
+
+    public ThreadCheck(HostBlacklistsDataSourceFacade skds, int rangeLimitA, int rangeLimitB, String ipAdress, Object lock){
         setServerList(skds, rangeLimitA, rangeLimitB);
         setIpToLookFor(ipAdress);
         this.indexes = new LinkedList<>();
         this.serversChecked = 0;
+        this.lock = lock;
+
     }
 
     public static void main(String[] args){
-        ThreadCheck t = new ThreadCheck(HostBlacklistsDataSourceFacade.getInstance(), 0000,9000, "202.24.34.55");
+        Object lock = new Object();
+        ThreadCheck t = new ThreadCheck(HostBlacklistsDataSourceFacade.getInstance(), 0000,9000, "202.24.34.55",lock);
         t.start();
         //System.out.println("No. de servers:");
         //System.out.println(HostBlacklistsDataSourceFacade.getInstance().getRegisteredServersCount());
@@ -31,9 +58,26 @@ public class ThreadCheck extends Thread{
     
     @Override
     public void run(){
-        countOccurrences();
-        //System.out.println("No. de ocurrencias:");
-        //System.out.println(getOccurrences());
+        for(int i = rangeLimitA; i < rangeLimitB; i++){
+            if(end){
+                break;
+            }
+            if(paused) {
+                synchronized(lock){
+                    try {
+                        lock.wait();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                };
+            }
+
+            this.serversChecked++;
+            if(skds.isInBlackListServer(i, ipAdress)){
+                this.ocurrences++;
+                this.indexes.add(i);
+            }
+        }
     }
 
     public void setServerList(HostBlacklistsDataSourceFacade skds, int rangeLimitA, int rangeLimitB){
@@ -46,23 +90,12 @@ public class ThreadCheck extends Thread{
         this.ipAdress = ipAdress;
     }
 
-    public void countOccurrences(){
-        ocurrences = 0;
-        for(int i = rangeLimitA; i < rangeLimitB; i++){
-            this.serversChecked++;
-            if(skds.isInBlackListServer(i, ipAdress)){
-                ocurrences++;
-                indexes.add(i);
-            }
-        }
-    }
-
     public int getOccurrences(){
         return this.ocurrences;
     }
 
     public int getServersChecked() {
-        return serversChecked;
+        return this.serversChecked;
     }
 
     public LinkedList<Integer> getIndexes(){
