@@ -30,6 +30,7 @@ public class ControlFrame extends JFrame {
     private JPanel contentPane;
 
     private List<Immortal> immortals;
+    private Object lock = new Object();
 
     private JTextArea output;
     private JLabel statisticsLabel;
@@ -88,6 +89,9 @@ public class ControlFrame extends JFrame {
         btnPauseAndCheck.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
 
+                for (Immortal im : immortals) {
+                    im.stopRunning();
+                }
                 /*
 				 * COMPLETAR
                  */
@@ -108,6 +112,12 @@ public class ControlFrame extends JFrame {
 
         btnResume.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
+                for (Immortal im : immortals) {
+                    im.continueRunning();
+                }
+                synchronized (lock) {
+                    lock.notifyAll();
+                }
                 /**
                  * IMPLEMENTAR
                  */
@@ -152,7 +162,7 @@ public class ControlFrame extends JFrame {
             List<Immortal> il = new LinkedList<Immortal>();
 
             for (int i = 0; i < ni; i++) {
-                Immortal i1 = new Immortal("im" + i, il, DEFAULT_IMMORTAL_HEALTH, DEFAULT_DAMAGE_VALUE,ucb);
+                Immortal i1 = new Immortal("im" + i, il, DEFAULT_IMMORTAL_HEALTH, DEFAULT_DAMAGE_VALUE,ucb, lock);
                 il.add(i1);
             }
             return il;
@@ -162,6 +172,7 @@ public class ControlFrame extends JFrame {
         }
 
     }
+
 
 }
 
