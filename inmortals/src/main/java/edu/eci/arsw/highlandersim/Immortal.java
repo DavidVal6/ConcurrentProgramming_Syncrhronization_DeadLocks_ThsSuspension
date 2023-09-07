@@ -2,6 +2,7 @@ package edu.eci.arsw.highlandersim;
 
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Immortal extends Thread {
@@ -17,6 +18,7 @@ public class Immortal extends Thread {
     private final String name;
     private Object lock;
     private boolean running = true;
+    private AtomicBoolean alive = new AtomicBoolean(true);
 
     private final Random r = new Random(System.currentTimeMillis());
 
@@ -34,6 +36,12 @@ public class Immortal extends Thread {
     public void run() {
 
         while (true) {
+            synchronized(health){
+                if (this.health.get() <= 0){
+                    this.alive.set(false);
+                    break;
+                }
+            };
             if(running) {
                 Immortal im;
 
@@ -51,7 +59,7 @@ public class Immortal extends Thread {
                 this.fight(im);
 
                 try {
-                    Thread.sleep(1);
+                    Thread.sleep(100);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -68,6 +76,10 @@ public class Immortal extends Thread {
 
         }
 
+    }
+
+    public boolean isImAlive(){
+        return alive.get();
     }
 
     public void stopRunning() {
