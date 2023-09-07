@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicStampedReference;
 
 public class Immortal extends Thread {
 
@@ -37,8 +38,8 @@ public class Immortal extends Thread {
 
         while (true) {
             synchronized(health){
-                if (this.health.get() <= 0){
-                    this.alive.set(false);
+                if (this.getHealth().get() <= 0){
+                    this.killImmortal();
                     break;
                 }
             };
@@ -59,7 +60,7 @@ public class Immortal extends Thread {
                 this.fight(im);
 
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(1);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -78,8 +79,12 @@ public class Immortal extends Thread {
 
     }
 
-    public boolean isImAlive(){
-        return alive.get();
+    public AtomicBoolean isImAlive(){
+        return alive;
+    }
+
+    public void killImmortal(){
+        alive.set(false);
     }
 
     public void stopRunning() {
