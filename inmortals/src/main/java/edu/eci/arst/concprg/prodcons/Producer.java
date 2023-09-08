@@ -21,11 +21,13 @@ public class Producer extends Thread {
     private int dataSeed = 0;
     private Random rand=null;
     private final long stockLimit;
+    private Object monitor;
 
-    public Producer(Queue<Integer> queue,long stockLimit) {
+     public Producer(Queue<Integer> queue, long stockLimit, Object monitor) {
         this.queue = queue;
         rand = new Random(System.currentTimeMillis());
-        this.stockLimit=stockLimit;
+        this.stockLimit = stockLimit;
+        this.monitor = monitor;
     }
 
     @Override
