@@ -6,10 +6,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Immortal extends Thread {
 
-    private ImmortalUpdateReportCallback updateCallback=null;
-    
+    private ImmortalUpdateReportCallback updateCallback = null;
+
     private AtomicInteger health = new AtomicInteger();
-    
+
     private int defaultDamageValue;
 
     private final List<Immortal> immortalsPopulation;
@@ -20,54 +20,46 @@ public class Immortal extends Thread {
 
     private final Random r = new Random(System.currentTimeMillis());
 
-
-    public Immortal(String name, List<Immortal> immortalsPopulation, int health, int defaultDamageValue, ImmortalUpdateReportCallback ucb, Object lock) {
+    public Immortal(String name, List<Immortal> immortalsPopulation, int health, int defaultDamageValue,
+            ImmortalUpdateReportCallback ucb, Object lock) {
         super(name);
-        this.updateCallback=ucb;
+        this.updateCallback = ucb;
         this.name = name;
         this.immortalsPopulation = immortalsPopulation;
         this.health.set(health);
-        this.defaultDamageValue=defaultDamageValue;
+        this.defaultDamageValue = defaultDamageValue;
         this.lock = lock;
     }
 
     public void run() {
 
-        while (true) {
-            if(running) {
-                Immortal im;
+        while (health.get() > 0 && running) {
+            Immortal im;
 
-                int myIndex = immortalsPopulation.indexOf(this);
+            int myIndex = immortalsPopulation.indexOf(this);
 
-                int nextFighterIndex = r.nextInt(immortalsPopulation.size());
+            int nextFighterIndex = r.nextInt(immortalsPopulation.size());
 
-                //avoid self-fight
-                if (nextFighterIndex == myIndex) {
-                    nextFighterIndex = ((nextFighterIndex + 1) % immortalsPopulation.size());
-                }
-
-                im = immortalsPopulation.get(nextFighterIndex);
-
-                this.fight(im);
-
-                try {
-                    Thread.sleep(1);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                synchronized(lock) {
-                    try {
-                        lock.wait();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
+            // avoid self-fight
+            if (nextFighterIndex == myIndex) {
+                nextFighterIndex = ((nextFighterIndex + 1) % immortalsPopulation.size());
             }
-            
 
+            im = immortalsPopulation.get(nextFighterIndex);
+
+            this.fight(im);
+
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            if (!running) {
+                this.toSleep();
+            }
         }
-
+        this.toSleep();
     }
 
     public void stopRunning() {
@@ -80,20 +72,29 @@ public class Immortal extends Thread {
 
     public void fight(Immortal i2) {
         AtomicInteger i2Health = i2.getHealth();
-        
-        synchronized(health){
-            synchronized(i2Health){
+
+        synchronized ((immortalsPopulation.indexOf(i2) < immortalsPopulation.indexOf(this))?i2:this) {
+            synchronized ((immortalsPopulation.indexOf(i2) > immortalsPopulation.indexOf(this))?i2:this) {
                 if (i2Health.get() > 0) {
                     i2.changeHealth(i2.getHealth().get() - defaultDamageValue);
                     this.health.addAndGet(defaultDamageValue);
-                    updateCallback.processReport("Fight: " + this + " vs " + i2+"\n");
-                }else {
+                    updateCallback.processReport("Fight: " + this + " vs " + i2 + "\n");
+                } else {
                     updateCallback.processReport(this + " says:" + i2 + " is already dead!\n");
                 }
             }
         }
-    } 
+    }
 
+    public void toSleep() {
+        try {
+            synchronized (immortalsPopulation) {
+                immortalsPopulation.wait();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 
     public void changeHealth(int v) {
         health.set(v);
