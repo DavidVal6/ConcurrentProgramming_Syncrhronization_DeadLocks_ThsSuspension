@@ -2,9 +2,7 @@ package edu.eci.arsw.highlandersim;
 
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicStampedReference;
 
 public class Immortal extends Thread {
 
@@ -19,10 +17,10 @@ public class Immortal extends Thread {
     private final String name;
     private Object lock;
     private boolean running = true;
-    private AtomicBoolean alive = new AtomicBoolean(true);
-
+    private boolean alive = true;
     private final Random r = new Random(System.currentTimeMillis());
     private int myIndex;
+    
 
     public Immortal(String name, List<Immortal> immortalsPopulation, int health, int defaultDamageValue, ImmortalUpdateReportCallback ucb, Object lock) {
         super(name);
@@ -37,13 +35,7 @@ public class Immortal extends Thread {
 
     public void run() {
 
-        while (true) {
-            synchronized(health){
-                if (this.getHealth().get() <= 0){
-                    this.killImmortal();
-                    break;
-                }
-            };
+        while (alive) {
             if(running) {
                 Immortal im;
 
@@ -51,6 +43,10 @@ public class Immortal extends Thread {
 
                 int nextFighterIndex = r.nextInt(immortalsPopulation.size());
 
+                if (immortalsPopulation.size() == 1){
+                    imDaWinner();
+                    break;
+                }
                 //avoid self-fight
                 if (nextFighterIndex == myIndex) {
                     nextFighterIndex = ((nextFighterIndex + 1) % immortalsPopulation.size());
@@ -61,7 +57,7 @@ public class Immortal extends Thread {
                 this.fight(im);
 
                 try {
-                    Thread.sleep(1);
+                    Thread.sleep(10);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -80,60 +76,39 @@ public class Immortal extends Thread {
 
     }
 
-    public AtomicBoolean isImAlive(){
-        return alive;
+    public void imDaWinner(){
+        updateCallback.processReport("Me " + this + " , I AM IMMORTAAAAL"+"\n");
+    }
+
+    public boolean isImAlive(){
+        return this.alive;
     }
 
     public void killImmortal(){
-        alive.set(false);
+        this.alive = false;
+        immortalsPopulation.remove(this);
     }
 
     public void stopRunning() {
-        running = false;
+        this.running = false;
     }
 
     public void continueRunning() {
-        running = true;
+        this.running = true;
     }
 
     public void fight(Immortal i2) {
-        AtomicInteger i2Health = i2.getHealth();
-        if (myIndex < i2.getMyIndex()){
-            synchronized(health){
-                synchronized(i2Health){
-                    realFight(this, i2, i2Health);
+        synchronized(myIndex < i2.getMyIndex()?this:i2){
+            synchronized(myIndex > i2.getMyIndex()?this:i2){
+                if (i2.getHealth().get() > 0) {
+                    i2.changeHealth(i2.getHealth().get() - defaultDamageValue);
+                    this.health.addAndGet(defaultDamageValue);
+                    updateCallback.processReport("Fight: " + this + " vs " + i2+"\n");
+                }else {
+                    i2.killImmortal();
+                    updateCallback.processReport(this + " says:" + i2 + " is already dead!\n");
                 }
             }
-        }else if (myIndex > i2.getMyIndex()){
-            synchronized(i2Health){
-                synchronized(health){
-                    realFight(this, i2, i2Health);
-                }
-            }
-        }else{
-            if (r.nextBoolean()){
-                synchronized(health){
-                    synchronized(i2Health){
-                        realFight(this, i2, i2Health);
-                    }
-                }
-            }else{
-                synchronized(i2Health){
-                    synchronized(health){
-                        realFight(this, i2, i2Health);
-                    }
-                }
-            }
-        }
-    }
-
-    public synchronized void realFight(Immortal i1, Immortal i2, AtomicInteger i2Health){
-        if (i2Health.get() > 0) {
-            i2.changeHealth(i2.getHealth().get() - defaultDamageValue);
-            this.health.addAndGet(defaultDamageValue);
-            updateCallback.processReport("Fight: " + this + " vs " + i2+"\n");
-        }else {
-            updateCallback.processReport(this + " says:" + i2 + " is already dead!\n");
         }
     }
 
@@ -142,11 +117,11 @@ public class Immortal extends Thread {
     }
 
     public void changeHealth(int v) {
-        health.set(v);
+        this.health.set(v);
     }
 
     public AtomicInteger getHealth() {
-        return health;
+        return this.health;
     }
 
     @Override
