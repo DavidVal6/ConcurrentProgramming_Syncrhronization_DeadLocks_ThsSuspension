@@ -121,7 +121,6 @@ public class ControlFrame extends JFrame {
             }
         });
 
-
         toolBar.add(btnResume);
 
         JLabel lblNumOfImmortals = new JLabel("num. of immortals:");

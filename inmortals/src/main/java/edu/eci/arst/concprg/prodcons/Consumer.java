@@ -9,6 +9,7 @@ import java.util.Queue;
 
 /**
  *
+<<<<<<< HEAD
  * @author davidValencia
  */
 public class Consumer extends Thread {
@@ -44,3 +45,28 @@ public class Consumer extends Thread {
 }
 
 
+=======
+ * @author hcadavid
+ */
+public class Consumer extends Thread{
+    
+    private Queue<Integer> queue;
+    
+    
+    public Consumer(Queue<Integer> queue){
+        this.queue=queue;        
+    }
+    
+    @Override
+    public void run() {
+        while (true) {
+
+            if (queue.size() > 0) {
+                int elem=queue.poll();
+                System.out.println("Consumer consumes "+elem);                                
+            }
+            
+        }
+    }
+}
+>>>>>>> origin/develop
