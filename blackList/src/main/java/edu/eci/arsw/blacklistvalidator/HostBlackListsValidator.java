@@ -9,8 +9,8 @@ import edu.eci.arsw.spamkeywordsdatasource.HostBlacklistsDataSourceFacade;
 import edu.eci.arsw.threads.ThreadCheck;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -19,6 +19,8 @@ import java.util.logging.Logger;
  * @author hcadavid
  */
 public class HostBlackListsValidator {
+    private Object lock = new Object();
+    private boolean running = true;
 
     private static final int BLACK_LIST_ALARM_COUNT=5;
     
@@ -32,21 +34,23 @@ public class HostBlackListsValidator {
      * @param ipaddress suspicious host's IP address.
      * @return  Blacklists numbers where the given host's IP address was found.
      */
-    public List<Integer> checkHost(String ipaddress, int N){
+    public ConcurrentLinkedDeque<Integer> checkHost(String ipaddress, int N){
         
-        LinkedList<Integer> blackListOcurrences=new LinkedList<>();
+        ConcurrentLinkedDeque<Integer> blackListOcurrences=new ConcurrentLinkedDeque<Integer>();
         
-        int ocurrencesCount=0;
+        AtomicInteger ocurrencesCount = new AtomicInteger(0);
         
         HostBlacklistsDataSourceFacade skds=HostBlacklistsDataSourceFacade.getInstance();
         
-        int checkedListsCount=0;
+        AtomicInteger checkedListsCount = new AtomicInteger(0);
 
         ArrayList<ThreadCheck> threads = new ArrayList<>();
 
         int numberOfServers = skds.getRegisteredServersCount();
 
         int size = numberOfServers/N;
+
+        boolean trust=true;
         
         for (int i=0; i<N;i++){
 
@@ -57,40 +61,69 @@ public class HostBlackListsValidator {
             } else {
                 b = size*(i+1);
             }
-
-            threads.add(new ThreadCheck(HostBlacklistsDataSourceFacade.getInstance(), a, b, ipaddress));
+            
+            threads.add(new ThreadCheck(HostBlacklistsDataSourceFacade.getInstance(), a, b, ipaddress,this.lock));
+            
         }
 
         for(ThreadCheck thread:threads){
             thread.start();
         }
 
-        try{
-            for(ThreadCheck thread:threads){
-                thread.join();
+        while (true) {
+            pauseThreads(threads);
+            for (ThreadCheck thread : threads) {
+                //System.out.println(thread.getIndexes());
+                for (Integer value: thread.getIndexes()){
+                    if(!blackListOcurrences.contains(value)){
+                        blackListOcurrences.addAll(thread.getIndexes());
+                    }
+                }
+                //blackListOcurrences.addAll(thread.getIndexes());
+                ocurrencesCount.addAndGet(thread.getOccurrences());
+                checkedListsCount.addAndGet(thread.getServersChecked());
             }
-        } catch(InterruptedException e) {
-            e.printStackTrace();
-        }
 
-        for(ThreadCheck thread:threads){
-            blackListOcurrences.addAll(thread.getIndexes());
-            ocurrencesCount += thread.getOccurrences();
-            checkedListsCount += thread.getServersChecked();
+            if (ocurrencesCount.get() >= BLACK_LIST_ALARM_COUNT) {
+                endThreads(threads);
+                trust=false;
+                break;
+            }
+
+            resumeThreads(threads);
+            checkedListsCount.set(0);
         }
         
-        if (ocurrencesCount>=BLACK_LIST_ALARM_COUNT){
+        if (trust){
+            skds.reportAsTrustworthy(ipaddress);
+        }else{
             skds.reportAsNotTrustworthy(ipaddress);
         }
-        else{
-            skds.reportAsTrustworthy(ipaddress);
-        }                
         
         LOG.log(Level.INFO, "Checked Black Lists:{0} of {1}", new Object[]{checkedListsCount, skds.getRegisteredServersCount()});
         
         return blackListOcurrences;
     }
-    
+
+    public void pauseThreads(ArrayList<ThreadCheck> threads){
+        for (ThreadCheck thread : threads){
+            thread.pauseThread();
+        }
+    }
+
+    public void  resumeThreads(ArrayList<ThreadCheck> threads){
+        for (ThreadCheck thread : threads){
+            thread.resumeThread();
+        }
+        synchronized (lock){
+            lock.notifyAll();
+        };
+    }
+    public void endThreads(ArrayList<ThreadCheck> threads){
+        for (ThreadCheck thread: threads){
+            thread.endThread();
+        }
+    }
     
     private static final Logger LOG = Logger.getLogger(HostBlackListsValidator.class.getName());
     

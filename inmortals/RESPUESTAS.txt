@@ -1,0 +1,60 @@
+PARTE I
+1. Revise el funcionamiento del programa y ejecútelo. Mientras esto ocurren, ejecute jVisualVM y revise el consumo de CPU del proceso correspondiente. ¿A qué se debe este consumo?, ¿cual es la clase responsable? 
+R: Es probable que funcione así o tenga el rendimiento que tiene ya que el consumidor consume más rápido de lo que el productor produce, y así se puede ver en el heap que se crea, pero no se utiliza, lo mismo con la manera con la que se crean los threads.
+---
+2. Haga los ajustes necesarios para que la solución use más eficientemente la CPU, teniendo en cuenta que -por ahora- la producción es lenta y el consumo es rápido. Verifique con JVisualVM que el consumo de CPU se reduzca. 
+R: Se implementaron cambios en:
+    * StrartProducer
+    * Producer
+    * Consumer
+Y los consumos mejoraron enormemente. Esto debido a que el thread main solo se encarga de delegar a través de un monitor o lo que normalmente se llama Lock, esto se hizo para tener un hilo de monitor sobre el consumidor y el productor.
+---
+3. Haga que ahora el productor produzca muy rápido, y el consumidor consuma lento. Teniendo en cuenta que el productor conoce un límite de Stock (cuantos elementos debería tener, a lo sumo en la cola), haga que dicho límite se respete. Revise el API de la colección usada como cola para ver cómo garantizar que dicho límite no se supere. Verifique que, al poner un límite pequeño para el 'stock', no haya consumo alto de CPU ni errores. 
+R: Con solo poner al consumidor un sleep más largo, será posible. Sin embargo, para la entrega final el archivo tendrá la opción del numeral dos, ya que es la mejor optimizada para este problema.
+---
+---
+---
+PARTE II
+
+
+---
+---
+---
+PARTE III
+1. Programa revisado.
+---
+2. Revise el código e identifique cómo se implementó la funcionalidad antes indicada. Dada la intención del juego, un invariante debería ser que la sumatoria de los puntos de vida de todos los jugadores siempre sea el mismo (claro está, en un instante de tiempo en el que no esté en proceso una operación de incremento/reducción de tiempo). Para este caso, para N jugadores, ¿cuál debería ser este valor?
+R: Para cada inmortal se define que los puntos de vida de cada uno son de 100. Por lo tanto, el 	invariante para la sumatoria de vidas de todos los inmortales debería ser siempre N*100. 
+---
+3. Ejecute la aplicación y verifique cómo funcionan la opción ‘pause and check’. ¿Se cumple el invariante?
+R: La aplicación se ejecuta. De antemano, el programa define a 3 inmortales con lo que el invariante debería ser de N*100 = (3) *100 = 300. Se observa que la suma del total de vida de los 3 inmortales presentes es de 480 con lo cual se confirma que el invariante no se está cumpliendo. 
+---
+4. Una primera hipótesis para que se presente la condición de carrera para dicha función (pause and check), es que el programa consulta la lista cuyos valores va a imprimir, a la vez que otros hilos modifican sus valores. Para corregir esto, haga lo que sea necesario para que efectivamente, antes de imprimir los resultados actuales, se pausen todos los demás hilos. Adicionalmente, implemente la opción ‘resume’.
+R: Se completa el método asociado al botón “Pause and Check”. Se completa el método asociado al botón “Resume”.
+---
+5. Verifique nuevamente el funcionamiento (haga clic muchas veces en el botón) ¿Se cumple o no el invariante? 
+R: Luego de revisar la funcionalidad varias veces se observa que aun después de implementar estas 	 medidas de pausa y continuación, aun no es posible cumplir con el invariante.
+---
+6. Identifique posibles regiones críticas en lo que respecta a la pelea de los inmortales. Implemente una estrategia de bloqueo que evite las condiciones de carrera.  
+R: Se identifican 2 regiones criticas la vida de los inmortales y la lista que comparten sobre sus rivales. Los atributos de vida antes eran enteros y pasan a ser AtomicInteger para evitar operaciones sucias. La lista que contiene a los inmortales pasa a ser sincronizada ahora. Por último, se implementa un mecanismo de bloques sincronizados dobles para la vida propia del inmortal que está atacando y para el que está siendo atacado. 
+---
+7. Tras implementar su estrategia, ponga a correr su programa, y ponga atención a si éste se llega a detener. Si es así, use los programas jps y jstack para identificar por qué el programa se detuvo.
+R: Se utiliza el comando jps –l para listar todos los procesos de java existentes y se observa que se encuentra el de nuestra aplicación. Se utiliza el comando jps –l para listar todos los procesos de java existentes y se observa que se encuentra el de nuestra aplicación. Una vez obtenido el identificador del proceso que lleva el programa de los inmortales, se utiliza el comando jstack –l <idProceso> para conocer información sobre el estado de los hilos que haya dentro del proceso. Al final se observa que el comando resalta que se está alcanzando un bloqueo mortal.
+---
+8. Plantee una estrategia para corregir el problema antes identificado (puede revisar de nuevo las páginas 206 y 207 de Java Concurrency in Practice). 
+R: La solución que planteamos consiste en tener la capacidad de identificar cuáles de los inmortales ya han fallecido, impidiendo que sigan combatiendo y pudiendo regenerar vida cuando esta haya alcanzado un valor de 0. De esta forma, los inmortales fallecidos dejan de ser considerados para ser llamados evitando llamados erróneos y posibles bloqueos en los hilos.
+---
+9.Una vez corregido el problema, rectifique que el programa siga funcionando de manera consistente cuando se ejecutan 100, 1000 o 10000 inmortales. Si en estos casos grandes se empieza a incumplir de nuevo el invariante, debe analizar lo realizado en el paso 4. 
+R: Ya no se presentan problemas del mismo estilo.
+---
+10. Un elemento molesto para la simulación es que en cierto punto de la misma hay pocos 'inmortales' vivos realizando peleas fallidas con 'inmortales' ya muertos. Es necesario ir suprimiendo los inmortales muertos de la simulación a medida que van muriendo. Para esto: 
+Analizando el esquema de funcionamiento de la simulación, ¿esto podría crear una condición de carrera?  
+R: Si puede crear una condición de carrera, pues si en el registro compartido “immortalsPopulation” se lleva una lista de inmortales, los diferentes hilos deben intentar acceder a ella para actualizarla en el momento que el asesinato ocurra. Con la configuración actual, esta lista es privada y final, impidiendo que se eliminen los elementos que la conforman. La condición de carrera haría que múltiples hilos intenten actualizar esta lista eliminando inmortales que ya deben quedar fuera del juego. 
+---
+Implemente la funcionalidad, ejecute la simulación y observe qué problema se presenta cuando hay muchos 'inmortales' en la misma. Escriba sus conclusiones al respecto en el archivo RESPUESTAS.txt. 
+R: Uno de los problemas que se evidencian es que muchos inmortales son atacados y atacan al mismo tiempo, de forma que, al intentar bloquear el recurso para escribir en él, para el momento en que este se libere la situación del juego puede haber cambiado ya de forma significativa 
+    *Competencia por recursos compartidos: Si hay muchos inmortales eliminando inmortales muertos, puede haber una competencia constante por el recurso compartido, lo que lleva a una mayor latencia y un mayor uso de CPU debido a la sincronización y la contención de hilos. 
+    *Bloqueo generalizado: Cuando un hilo está eliminando a un inmortal de la lista, otros hilos deben esperar hasta que se libere el bloqueo en la lista, ralentizando significativamente el programa, generando un cuello de botella en la simulación.
+---
+11. Para finalizar, implemente la opción STOP.
+R: Botón STOP implementado Correctamente
