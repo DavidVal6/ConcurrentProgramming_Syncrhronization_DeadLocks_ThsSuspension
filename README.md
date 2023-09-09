@@ -1,7 +1,5 @@
-# ConcurrentProgramming_Syncrhronization_DeadLocks_ThsSuspension
-
 # Arquitecturas de Software
-## Introducción al paralelismo - hilos
+## ConcurrentProgramming_Syncrhronization_DeadLocks_ThsSuspension
 Escuela Colombiana de Ingeniería  
 2023 - 2
 
