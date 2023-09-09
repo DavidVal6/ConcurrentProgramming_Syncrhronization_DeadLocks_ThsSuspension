@@ -66,25 +66,8 @@ public class ControlFrame extends JFrame {
         JToolBar toolBar = new JToolBar();
         contentPane.add(toolBar, BorderLayout.NORTH);
 
-        final JButton btnStart = new JButton("Start");
-        btnStart.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-
-                immortals = setupInmortals();
-
-                if (immortals != null) {
-                    for (Immortal im : immortals) {
-                        im.start();
-                    }
-                }
-
-                btnStart.setEnabled(false);
-
-            }
-        });
-        toolBar.add(btnStart);
-
         JButton btnPauseAndCheck = new JButton("Pause and check");
+        btnPauseAndCheck.setEnabled(false);
         btnPauseAndCheck.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
 
@@ -102,9 +85,9 @@ public class ControlFrame extends JFrame {
                 statisticsLabel.setText("<html>"+immortals.toString()+"<br>Health sum:"+ sum);
             }
         });
-        toolBar.add(btnPauseAndCheck);
 
         JButton btnResume = new JButton("Resume");
+        btnResume.setEnabled(false);
 
         btnResume.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -121,8 +104,31 @@ public class ControlFrame extends JFrame {
             }
         });
 
+
+        final JButton btnStart = new JButton("Start");
+        btnStart.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+
+                immortals = setupInmortals();
+
+                if (immortals != null) {
+                    for (Immortal im : immortals) {
+                        im.start();
+                    }
+                }
+
+                btnStart.setEnabled(false);
+                btnPauseAndCheck.setEnabled(true);
+                btnResume.setEnabled(true);
+
+
+            }
+        });
+        toolBar.add(btnStart);
+        toolBar.add(btnPauseAndCheck);
         toolBar.add(btnResume);
 
+        
         JLabel lblNumOfImmortals = new JLabel("num. of immortals:");
         toolBar.add(lblNumOfImmortals);
 

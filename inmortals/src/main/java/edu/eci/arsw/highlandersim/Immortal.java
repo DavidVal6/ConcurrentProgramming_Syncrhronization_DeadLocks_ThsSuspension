@@ -98,11 +98,11 @@ public class Immortal extends Thread {
     }
 
     public void fight(Immortal i2) {
-        synchronized(myIndex < i2.getMyIndex()?this:i2){
-            synchronized(myIndex > i2.getMyIndex()?this:i2){
+        synchronized(myIndex < i2.getMyIndex()?this.health:i2.health){
+            synchronized(myIndex > i2.getMyIndex()?this.health:i2.health){
                 if (i2.getHealth().get() > 0) {
-                    i2.changeHealth(i2.getHealth().get() - defaultDamageValue);
                     this.health.addAndGet(defaultDamageValue);
+                    i2.health.addAndGet((-defaultDamageValue));
                     updateCallback.processReport("Fight: " + this + " vs " + i2+"\n");
                 }else {
                     i2.killImmortal();
