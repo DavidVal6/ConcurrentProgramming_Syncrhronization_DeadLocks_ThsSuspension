@@ -11,25 +11,15 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class StartProduction {
-    
-    
-    public static void main(String[] args) {
-        
-        Queue<Integer> queue=new LinkedBlockingQueue<>();
-        
-        
-        new Producer(queue,Long.MAX_VALUE).start();
-        
-        //let the producer create products for 5 seconds (stock).
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(StartProduction.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        
-        
-        new Consumer(queue).start();
-    }
-    
 
+    public static void main(String[] args) {
+        Queue<Integer> queue = new LinkedBlockingQueue<>();
+        Object monitor = new Object(); // Objeto monitor para sincronización
+
+        Producer producer = new Producer(queue, Long.MAX_VALUE, monitor);
+        Consumer consumer = new Consumer(queue, monitor);
+
+        producer.start();
+        consumer.start();
+    }
 }
