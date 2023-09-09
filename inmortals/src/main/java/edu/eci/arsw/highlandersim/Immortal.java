@@ -17,6 +17,7 @@ public class Immortal extends Thread {
     private final String name;
     private Object lock;
     private boolean running = true;
+    private boolean alive = true;
 
     private final Random r = new Random(System.currentTimeMillis());
 
@@ -33,34 +34,59 @@ public class Immortal extends Thread {
 
     public void run() {
 
-        while (health.get() > 0 && running) {
-            Immortal im;
+        while (alive) {
+            if(running) {
 
-            int myIndex = immortalsPopulation.indexOf(this);
+                Immortal im;
 
-            int nextFighterIndex = r.nextInt(immortalsPopulation.size());
+                int myIndex = immortalsPopulation.indexOf(this);
 
-            // avoid self-fight
-            if (nextFighterIndex == myIndex) {
-                nextFighterIndex = ((nextFighterIndex + 1) % immortalsPopulation.size());
-            }
+                int nextFighterIndex = r.nextInt(immortalsPopulation.size());
 
-            im = immortalsPopulation.get(nextFighterIndex);
+                if (immortalsPopulation.size() == 1){
+                    imDaWinner();
+                    break;
+                }
+                //avoid self-fight
+                if (nextFighterIndex == myIndex) {
+                    nextFighterIndex = ((nextFighterIndex + 1) % immortalsPopulation.size());
+                }
 
-            this.fight(im);
+                im = immortalsPopulation.get(nextFighterIndex);
 
-            try {
-                Thread.sleep(1);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+                this.fight(im);
 
-            if (!running) {
-                this.toSleep();
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                synchronized(lock) {
+                    try {
+                        lock.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
         }
-        this.toSleep();
+
+            // if (!running) {
+            //     this.toSleep();
+            // }
+        //this.toSleep();
     }
+
+    public void imDaWinner(){
+        updateCallback.processReport("Me " + this + " , I AM IMMORTAAAAL"+"\n");
+    }
+
+    public boolean isImAlive(){
+        return this.alive;
+    }
+    
+
 
     public void stopRunning() {
         running = false;
@@ -75,12 +101,19 @@ public class Immortal extends Thread {
 
         synchronized ((immortalsPopulation.indexOf(i2) < immortalsPopulation.indexOf(this))?i2:this) {
             synchronized ((immortalsPopulation.indexOf(i2) > immortalsPopulation.indexOf(this))?i2:this) {
-                if (i2Health.get() > 0) {
+                if (i2Health.get() > 0 && this.health.get() > 0) {
                     i2.changeHealth(i2.getHealth().get() - defaultDamageValue);
                     this.health.addAndGet(defaultDamageValue);
                     updateCallback.processReport("Fight: " + this + " vs " + i2 + "\n");
                 } else {
-                    updateCallback.processReport(this + " says:" + i2 + " is already dead!\n");
+                    if(i2Health.get() == 0){
+                        killImmortal(i2);
+                        updateCallback.processReport(this + " says:" + i2 + " is already dead!\n");
+                    } else {
+                        killImmortal(this);
+                        updateCallback.processReport(this + " says:" + this + " is already dead!\n");
+                    }
+                    
                 }
             }
         }
@@ -109,5 +142,16 @@ public class Immortal extends Thread {
 
         return name + "[" + health + "]";
     }
+    
+    public void killImmortal(Immortal im){
+        im.alive = false;
+    }
 
+    public void updateList() {
+        for(Immortal im : immortalsPopulation){
+            if(!im.isAlive()){
+                immortalsPopulation.remove(im);
+            }
+        }
+    }
 }
