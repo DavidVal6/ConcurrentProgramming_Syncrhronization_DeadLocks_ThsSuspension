@@ -26,6 +26,7 @@ public class ControlFrame extends JFrame {
 
     private static final int DEFAULT_IMMORTAL_HEALTH = 100;
     private static final int DEFAULT_DAMAGE_VALUE = 10;
+    private int INVARIANT;
 
     private JPanel contentPane;
 
@@ -83,6 +84,8 @@ public class ControlFrame extends JFrame {
                     sum += im.getHealth().get();
                 }
 
+                btnPauseAndCheck.setEnabled(false);
+
                 statisticsLabel.setText("<html>"+immortals.toString()+"<br>Health sum:"+ sum);
             }
         });
@@ -98,6 +101,8 @@ public class ControlFrame extends JFrame {
                 synchronized (lock) {
                     lock.notifyAll();
                 }
+                btnResume.setEnabled(false);
+                btnPauseAndCheck.setEnabled(true);
                 /**
                  * IMPLEMENTAR
                  */
@@ -160,11 +165,13 @@ public class ControlFrame extends JFrame {
         try {
             int ni = Integer.parseInt(numOfImmortals.getText());
 
+            this.INVARIANT = this.DEFAULT_IMMORTAL_HEALTH * ni;
+
             List<Immortal> synchronizedList = new LinkedList<Immortal>();
             List<Immortal> il = Collections.synchronizedList(synchronizedList);
 
             for (int i = 0; i < ni; i++) {
-                Immortal i1 = new Immortal("im" + i, il, DEFAULT_IMMORTAL_HEALTH, DEFAULT_DAMAGE_VALUE,ucb, lock);
+                Immortal i1 = new Immortal("im" + i, il, DEFAULT_IMMORTAL_HEALTH, DEFAULT_DAMAGE_VALUE,ucb, lock, INVARIANT);
                 il.add(i1);
             }
             return il;
