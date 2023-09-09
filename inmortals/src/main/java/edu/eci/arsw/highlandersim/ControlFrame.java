@@ -8,7 +8,6 @@ import java.awt.event.ActionListener;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Timer;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -37,6 +36,10 @@ public class ControlFrame extends JFrame {
     private JLabel statisticsLabel;
     private JScrollPane scrollPane;
     private JTextField numOfImmortals;
+    private JButton btnPauseAndCheck;
+    private JButton btnStop;
+    private JButton btnResume;
+    
 
     /**
      * Launch the application.
@@ -68,7 +71,7 @@ public class ControlFrame extends JFrame {
         JToolBar toolBar = new JToolBar();
         contentPane.add(toolBar, BorderLayout.NORTH);
 
-        JButton btnPauseAndCheck = new JButton("Pause and check");
+        btnPauseAndCheck = new JButton("Pause and check");
         btnPauseAndCheck.setEnabled(false);
         btnPauseAndCheck.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -85,12 +88,12 @@ public class ControlFrame extends JFrame {
                 }
 
                 btnPauseAndCheck.setEnabled(false);
-
+                btnResume.setEnabled(true);
                 statisticsLabel.setText("<html>"+immortals.toString()+"<br>Health sum:"+ sum);
             }
         });
 
-        JButton btnResume = new JButton("Resume");
+        btnResume = new JButton("Resume");
         btnResume.setEnabled(false);
 
         btnResume.addActionListener(new ActionListener() {
@@ -106,7 +109,6 @@ public class ControlFrame extends JFrame {
                 /**
                  * IMPLEMENTAR
                  */
-
             }
         });
 
@@ -142,8 +144,16 @@ public class ControlFrame extends JFrame {
         toolBar.add(numOfImmortals);
         numOfImmortals.setColumns(10);
 
-        JButton btnStop = new JButton("STOP");
+        btnStop = new JButton("STOP");
         btnStop.setForeground(Color.RED);
+        btnStop.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                int respuesta = JOptionPane.showConfirmDialog(null, "Do you want to stop the game?", "Stop", JOptionPane.YES_NO_OPTION);
+                if(respuesta == JOptionPane.YES_OPTION){
+                    System.exit(0);
+                }
+            }
+        });
         toolBar.add(btnStop);
 
         scrollPane = new JScrollPane();
